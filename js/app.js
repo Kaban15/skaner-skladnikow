@@ -70,6 +70,22 @@ const App = {
             nutritionList: document.getElementById('nutrition-list'),
             ingredientsContainer: document.getElementById('ingredients-container'),
             ingredientsText: document.getElementById('ingredients-text'),
+            addIngredientsBtn: document.getElementById('add-ingredients-btn'),
+            scanIngredientsBtn: document.getElementById('scan-ingredients-btn'),
+            // Modal
+            ingredientsModal: document.getElementById('ingredients-modal'),
+            closeModal: document.getElementById('close-modal'),
+            modalTitle: document.getElementById('modal-title'),
+            cameraMode: document.getElementById('camera-mode'),
+            ocrMode: document.getElementById('ocr-mode'),
+            editMode: document.getElementById('edit-mode'),
+            cameraPreview: document.getElementById('camera-preview'),
+            captureBtn: document.getElementById('capture-btn'),
+            cancelCameraBtn: document.getElementById('cancel-camera-btn'),
+            ocrImage: document.getElementById('ocr-image'),
+            ocrStatusText: document.getElementById('ocr-status-text'),
+            ingredientsInput: document.getElementById('ingredients-input'),
+            saveIngredientsBtn: document.getElementById('save-ingredients-btn'),
             additivesContainer: document.getElementById('additives-container'),
             additivesList: document.getElementById('additives-list'),
             analysisSummary: document.getElementById('analysis-summary')
@@ -91,6 +107,21 @@ const App = {
         // Retry i nowe wyszukiwanie
         this.elements.retryBtn.addEventListener('click', () => this.resetToInput());
         this.elements.newSearchBtn.addEventListener('click', () => this.resetToInput());
+
+        // Dodawanie skladu
+        this.elements.addIngredientsBtn.addEventListener('click', () => this.openIngredientsModal('manual'));
+        this.elements.scanIngredientsBtn.addEventListener('click', () => this.openIngredientsModal('camera'));
+        this.elements.closeModal.addEventListener('click', () => this.closeIngredientsModal());
+        this.elements.cancelCameraBtn.addEventListener('click', () => this.cancelCamera());
+        this.elements.captureBtn.addEventListener('click', () => this.capturePhoto());
+        this.elements.saveIngredientsBtn.addEventListener('click', () => this.saveIngredients());
+
+        // Zamkniecie modalu po kliknieciu w tlo
+        this.elements.ingredientsModal.addEventListener('click', (e) => {
+            if (e.target === this.elements.ingredientsModal) {
+                this.closeIngredientsModal();
+            }
+        });
     },
 
     // Obsluga wyszukiwania
@@ -273,14 +304,17 @@ const App = {
         // Wartosci odzywcze
         this.displayNutrition(product.nutriments);
 
-        // Sklad - sprawdzamy wiele pol
-        const ingredientsText = product.ingredients_text
+        // Sklad - najpierw sprawdz localStorage, potem API
+        const barcode = product.code || product._id;
+        const storedIngredients = barcode ? this.getStoredIngredients(barcode) : null;
+        const ingredientsText = storedIngredients
+            || product.ingredients_text
             || product.ingredients_text_pl
             || product.ingredients_text_en
             || product.ingredients_text_with_allergens
             || product.ingredients_text_with_allergens_pl
             || product.ingredients_text_with_allergens_en;
-        this.displayIngredients(ingredientsText);
+        this.displayIngredients(ingredientsText, !!storedIngredients);
 
         // Dodatki
         this.displayAdditives(analysis.additives);
@@ -374,7 +408,7 @@ const App = {
     },
 
     // Wyswietlanie skladu
-    displayIngredients(ingredientsText) {
+    displayIngredients(ingredientsText, isUserAdded = false) {
         if (!ingredientsText) {
             this.elements.ingredientsText.innerHTML = '<span class="no-data">Brak danych o skladzie w bazie. Sprawdz etykiete produktu.</span>';
             this.elements.ingredientsContainer.classList.remove('hidden');
@@ -389,6 +423,11 @@ const App = {
             /\b(E\s?\d{3,4}[a-z]?)\b/gi,
             '<span class="additive" title="Kliknij aby zobaczyc szczegoly">$1</span>'
         );
+
+        // Dodaj znacznik jesli sklad dodany przez uzytkownika
+        if (isUserAdded) {
+            formattedText = '<span class="user-added-badge">Dodane przez Ciebie</span>' + formattedText;
+        }
 
         this.elements.ingredientsText.innerHTML = formattedText;
         this.elements.ingredientsContainer.classList.remove('hidden');
@@ -480,6 +519,209 @@ const App = {
         this.elements.barcodeInput.value = '';
         this.elements.barcodeInput.focus();
         this.state.currentProduct = null;
+    },
+
+    // ========== OBSLUGA DODAWANIA SKLADU ==========
+
+    // Stan kamery
+    cameraStream: null,
+
+    // Otwarcie modalu
+    openIngredientsModal(mode) {
+        this.elements.ingredientsModal.classList.remove('hidden');
+        this.elements.editMode.classList.remove('hidden');
+        this.elements.cameraMode.classList.add('hidden');
+        this.elements.ocrMode.classList.add('hidden');
+
+        // Wczytaj zapisany sklad jesli istnieje
+        const barcode = this.state.currentProduct?.code || this.state.currentProduct?._id;
+        if (barcode) {
+            const saved = this.getStoredIngredients(barcode);
+            if (saved) {
+                this.elements.ingredientsInput.value = saved;
+            } else {
+                this.elements.ingredientsInput.value = '';
+            }
+        }
+
+        if (mode === 'camera') {
+            this.startCamera();
+        } else {
+            this.elements.modalTitle.textContent = 'Dodaj sklad produktu';
+        }
+    },
+
+    // Zamkniecie modalu
+    closeIngredientsModal() {
+        this.elements.ingredientsModal.classList.add('hidden');
+        this.stopCamera();
+    },
+
+    // Uruchomienie kamery
+    async startCamera() {
+        this.elements.modalTitle.textContent = 'Zrob zdjecie skladu';
+        this.elements.editMode.classList.add('hidden');
+        this.elements.cameraMode.classList.remove('hidden');
+        this.elements.ocrMode.classList.add('hidden');
+
+        try {
+            this.cameraStream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: 'environment' }
+            });
+
+            const video = document.createElement('video');
+            video.srcObject = this.cameraStream;
+            video.autoplay = true;
+            video.playsInline = true;
+
+            this.elements.cameraPreview.innerHTML = '';
+            this.elements.cameraPreview.appendChild(video);
+        } catch (error) {
+            console.error('Blad kamery:', error);
+            alert('Nie udalo sie uruchomic kamery. Sprawdz uprawnienia.');
+            this.cancelCamera();
+        }
+    },
+
+    // Zatrzymanie kamery
+    stopCamera() {
+        if (this.cameraStream) {
+            this.cameraStream.getTracks().forEach(track => track.stop());
+            this.cameraStream = null;
+        }
+        this.elements.cameraPreview.innerHTML = '';
+    },
+
+    // Anulowanie trybu kamery
+    cancelCamera() {
+        this.stopCamera();
+        this.elements.cameraMode.classList.add('hidden');
+        this.elements.editMode.classList.remove('hidden');
+        this.elements.modalTitle.textContent = 'Dodaj sklad produktu';
+    },
+
+    // Zrobienie zdjecia
+    async capturePhoto() {
+        const video = this.elements.cameraPreview.querySelector('video');
+        if (!video) return;
+
+        // Utworzenie canvas i zrobienie zdjecia
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0);
+
+        // Konwersja do obrazu
+        const imageData = canvas.toDataURL('image/jpeg', 0.9);
+
+        // Zatrzymanie kamery
+        this.stopCamera();
+
+        // Przejscie do trybu OCR
+        this.elements.cameraMode.classList.add('hidden');
+        this.elements.ocrMode.classList.remove('hidden');
+        this.elements.ocrImage.src = imageData;
+        this.elements.modalTitle.textContent = 'Rozpoznawanie tekstu...';
+
+        // Uruchomienie OCR
+        await this.performOCR(imageData);
+    },
+
+    // Wykonanie OCR
+    async performOCR(imageData) {
+        try {
+            this.elements.ocrStatusText.textContent = 'Ladowanie modelu OCR...';
+
+            const worker = await Tesseract.createWorker('pol', 1, {
+                logger: m => {
+                    if (m.status === 'recognizing text') {
+                        const progress = Math.round(m.progress * 100);
+                        this.elements.ocrStatusText.textContent = `Rozpoznawanie tekstu... ${progress}%`;
+                    }
+                }
+            });
+
+            this.elements.ocrStatusText.textContent = 'Rozpoznawanie tekstu...';
+
+            const { data: { text } } = await worker.recognize(imageData);
+
+            await worker.terminate();
+
+            // Przejscie do trybu edycji z rozpoznanym tekstem
+            this.elements.ocrMode.classList.add('hidden');
+            this.elements.editMode.classList.remove('hidden');
+            this.elements.modalTitle.textContent = 'Sprawdz i popraw sklad';
+            this.elements.ingredientsInput.value = this.cleanOCRText(text);
+
+        } catch (error) {
+            console.error('Blad OCR:', error);
+            this.elements.ocrStatusText.textContent = 'Blad rozpoznawania. Sprobuj ponownie.';
+            setTimeout(() => {
+                this.elements.ocrMode.classList.add('hidden');
+                this.elements.editMode.classList.remove('hidden');
+                this.elements.modalTitle.textContent = 'Dodaj sklad produktu';
+            }, 2000);
+        }
+    },
+
+    // Czyszczenie tekstu z OCR
+    cleanOCRText(text) {
+        return text
+            .replace(/\n+/g, ' ')  // Zamien nowe linie na spacje
+            .replace(/\s+/g, ' ')  // Usun podwojne spacje
+            .replace(/[|]/g, 'l') // Popraw typowe bledy OCR
+            .trim();
+    },
+
+    // Zapisanie skladu
+    saveIngredients() {
+        const ingredients = this.elements.ingredientsInput.value.trim();
+        if (!ingredients) {
+            alert('Wpisz sklad produktu');
+            return;
+        }
+
+        const barcode = this.state.currentProduct?.code || this.state.currentProduct?._id;
+        if (!barcode) {
+            alert('Brak kodu produktu');
+            return;
+        }
+
+        // Zapisz do localStorage
+        this.storeIngredients(barcode, ingredients);
+
+        // Zaktualizuj widok
+        this.state.currentProduct.ingredients_text = ingredients;
+        this.displayIngredients(ingredients);
+
+        // Ponowna analiza produktu
+        const analysis = Analyzer.analyzeProduct(this.state.currentProduct);
+        this.displayAdditives(analysis.additives);
+        this.displaySummary(analysis.summary);
+
+        // Zamknij modal
+        this.closeIngredientsModal();
+    },
+
+    // Zapis do localStorage
+    storeIngredients(barcode, ingredients) {
+        const stored = JSON.parse(localStorage.getItem('userIngredients') || '{}');
+        stored[barcode] = ingredients;
+        localStorage.setItem('userIngredients', JSON.stringify(stored));
+    },
+
+    // Odczyt z localStorage
+    getStoredIngredients(barcode) {
+        const stored = JSON.parse(localStorage.getItem('userIngredients') || '{}');
+        return stored[barcode] || null;
+    },
+
+    // Sprawdzenie czy jest zapisany sklad dla produktu
+    checkStoredIngredients(product) {
+        const barcode = product?.code || product?._id;
+        if (!barcode) return null;
+        return this.getStoredIngredients(barcode);
     }
 };
 

@@ -146,6 +146,21 @@
             <div id="ingredients-container" class="ingredients-container">
                 <h3>Sklad</h3>
                 <div id="ingredients-text" class="ingredients-text"></div>
+                <div class="ingredients-actions">
+                    <button id="add-ingredients-btn" class="btn btn-secondary btn-small">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 5v14M5 12h14"/>
+                        </svg>
+                        Dodaj sklad recznie
+                    </button>
+                    <button id="scan-ingredients-btn" class="btn btn-secondary btn-small">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/>
+                            <circle cx="12" cy="13" r="3"/>
+                        </svg>
+                        Skanuj zdjecie
+                    </button>
+                </div>
             </div>
 
             <!-- Additives -->
@@ -179,8 +194,57 @@
         </footer>
     </div>
 
+    <!-- Modal do dodawania skladu -->
+    <div id="ingredients-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-title">Dodaj sklad produktu</h3>
+                <button id="close-modal" class="btn btn-close">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M18 6 6 18"></path>
+                        <path d="m6 6 12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <!-- Tryb kamery -->
+                <div id="camera-mode" class="hidden">
+                    <div id="camera-preview"></div>
+                    <div class="camera-actions">
+                        <button id="capture-btn" class="btn btn-primary">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"/>
+                            </svg>
+                            Zrob zdjecie
+                        </button>
+                        <button id="cancel-camera-btn" class="btn btn-secondary">Anuluj</button>
+                    </div>
+                </div>
+                <!-- Tryb OCR -->
+                <div id="ocr-mode" class="hidden">
+                    <div class="ocr-preview">
+                        <img id="ocr-image" src="" alt="Zdjecie do analizy">
+                    </div>
+                    <div class="ocr-status">
+                        <div class="loader"></div>
+                        <p id="ocr-status-text">Analizowanie zdjecia...</p>
+                    </div>
+                </div>
+                <!-- Tryb edycji -->
+                <div id="edit-mode">
+                    <p class="modal-hint">Wpisz lub wklej liste skladnikow z opakowania:</p>
+                    <textarea id="ingredients-input" placeholder="np. woda, cukier, maka pszenna, sol..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="save-ingredients-btn" class="btn btn-primary">Zapisz sklad</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <script src="https://unpkg.com/tesseract.js@5/dist/tesseract.min.js"></script>
     <script src="js/analyzer.js"></script>
     <script src="js/scanner.js"></script>
     <script src="js/app.js"></script>
