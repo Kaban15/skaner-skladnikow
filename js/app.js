@@ -273,8 +273,14 @@ const App = {
         // Wartosci odzywcze
         this.displayNutrition(product.nutriments);
 
-        // Sklad
-        this.displayIngredients(product.ingredients_text || product.ingredients_text_pl);
+        // Sklad - sprawdzamy wiele pol
+        const ingredientsText = product.ingredients_text
+            || product.ingredients_text_pl
+            || product.ingredients_text_en
+            || product.ingredients_text_with_allergens
+            || product.ingredients_text_with_allergens_pl
+            || product.ingredients_text_with_allergens_en;
+        this.displayIngredients(ingredientsText);
 
         // Dodatki
         this.displayAdditives(analysis.additives);
@@ -370,7 +376,8 @@ const App = {
     // Wyswietlanie skladu
     displayIngredients(ingredientsText) {
         if (!ingredientsText) {
-            this.elements.ingredientsContainer.classList.add('hidden');
+            this.elements.ingredientsText.innerHTML = '<span class="no-data">Brak danych o skladzie w bazie. Sprawdz etykiete produktu.</span>';
+            this.elements.ingredientsContainer.classList.remove('hidden');
             return;
         }
 
