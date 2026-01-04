@@ -27,7 +27,6 @@ const App = {
     init() {
         this.cacheElements();
         this.bindEvents();
-        Scanner.init('scanner-video-container');
 
         // Sprawdzenie czy konfiguracja jest ustawiona
         if (this.config.n8nWebhookUrl === 'TWOJ_N8N_WEBHOOK_URL') {
@@ -40,12 +39,6 @@ const App = {
         this.elements = {
             barcodeInput: document.getElementById('barcode-input'),
             searchBtn: document.getElementById('search-btn'),
-            scanBtn: document.getElementById('scan-btn'),
-            scannerSection: document.getElementById('scanner-section'),
-            closeScanner: document.getElementById('close-scanner'),
-            torchBtn: document.getElementById('torch-btn'),
-            focusBtn: document.getElementById('focus-btn'),
-            scannerVideoContainer: document.getElementById('scanner-video-container'),
             loadingSection: document.getElementById('loading-section'),
             errorSection: document.getElementById('error-section'),
             errorMessage: document.getElementById('error-message'),
@@ -74,7 +67,9 @@ const App = {
             ingredientsContainer: document.getElementById('ingredients-container'),
             ingredientsText: document.getElementById('ingredients-text'),
             addIngredientsBtn: document.getElementById('add-ingredients-btn'),
-            scanIngredientsBtn: document.getElementById('scan-ingredients-btn'),
+            photoIngredientsBtn: document.getElementById('photo-ingredients-btn'),
+            uploadIngredientsBtn: document.getElementById('upload-ingredients-btn'),
+            imageUpload: document.getElementById('image-upload'),
             // Modal
             ingredientsModal: document.getElementById('ingredients-modal'),
             closeModal: document.getElementById('close-modal'),
@@ -103,25 +98,15 @@ const App = {
             if (e.key === 'Enter') this.handleSearch();
         });
 
-        // Skanowanie
-        this.elements.scanBtn.addEventListener('click', () => this.startScanner());
-        this.elements.closeScanner.addEventListener('click', () => this.stopScanner());
-
-        // Kontrolki skanera
-        this.elements.torchBtn.addEventListener('click', async () => {
-            const isOn = await Scanner.toggleTorch();
-            this.elements.torchBtn.classList.toggle('active', isOn);
-        });
-        this.elements.focusBtn.addEventListener('click', () => Scanner.triggerFocus());
-        this.elements.scannerVideoContainer.addEventListener('click', () => Scanner.triggerFocus());
-
         // Retry i nowe wyszukiwanie
         this.elements.retryBtn.addEventListener('click', () => this.resetToInput());
         this.elements.newSearchBtn.addEventListener('click', () => this.resetToInput());
 
         // Dodawanie skladu
         this.elements.addIngredientsBtn.addEventListener('click', () => this.openIngredientsModal('manual'));
-        this.elements.scanIngredientsBtn.addEventListener('click', () => this.openIngredientsModal('camera'));
+        this.elements.photoIngredientsBtn.addEventListener('click', () => this.openIngredientsModal('camera'));
+        this.elements.uploadIngredientsBtn.addEventListener('click', () => this.elements.imageUpload.click());
+        this.elements.imageUpload.addEventListener('change', (e) => this.handleImageUpload(e));
         this.elements.closeModal.addEventListener('click', () => this.closeIngredientsModal());
         this.elements.cancelCameraBtn.addEventListener('click', () => this.cancelCamera());
         this.elements.captureBtn.addEventListener('click', () => this.capturePhoto());
@@ -152,34 +137,6 @@ const App = {
         }
 
         await this.searchProduct(barcode);
-    },
-
-    // Uruchomienie skanera
-    async startScanner() {
-        this.elements.scannerSection.classList.remove('hidden');
-        this.elements.inputSection.classList.add('hidden');
-
-        await Scanner.start(
-            (code) => this.onBarcodeScanned(code),
-            (error) => {
-                this.stopScanner();
-                this.showError(error);
-            }
-        );
-    },
-
-    // Zatrzymanie skanera
-    stopScanner() {
-        Scanner.stop();
-        this.elements.scannerSection.classList.add('hidden');
-        this.elements.inputSection.classList.remove('hidden');
-    },
-
-    // Obsluga zeskanowanego kodu
-    async onBarcodeScanned(code) {
-        this.elements.scannerSection.classList.add('hidden');
-        this.elements.barcodeInput.value = code;
-        await this.searchProduct(code);
     },
 
     // Wyszukiwanie produktu
@@ -688,6 +645,30 @@ const App = {
             .replace(/\s+/g, ' ')  // Usun podwojne spacje
             .replace(/[|]/g, 'l') // Popraw typowe bledy OCR
             .trim();
+    },
+
+    // Obsluga uploadu zdjecia z galerii
+    async handleImageUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        // Reset inputa
+        event.target.value = '';
+
+        // Otworz modal w trybie OCR
+        this.elements.ingredientsModal.classList.remove('hidden');
+        this.elements.editMode.classList.add('hidden');
+        this.elements.cameraMode.classList.add('hidden');
+        this.elements.ocrMode.classList.remove('hidden');
+        this.elements.modalTitle.textContent = 'Rozpoznawanie tekstu...';
+
+        // Wczytaj obraz
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            this.elements.ocrImage.src = e.target.result;
+            await this.performOCR(e.target.result);
+        };
+        reader.readAsDataURL(file);
     },
 
     // Zapisanie skladu
