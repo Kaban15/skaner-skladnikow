@@ -8,6 +8,9 @@ const Scanner = {
     isScanning: false,
     onScanCallback: null,
     torchEnabled: false,
+    videoStream: null,
+    barcodeDetector: null,
+    scanInterval: null,
 
     // Inicjalizacja skanera
     init(containerId) {
@@ -22,6 +25,83 @@ const Scanner = {
 
         this.onScanCallback = onScanSuccess;
 
+        // Sprawdz czy BarcodeDetector jest dostepny (natywne API)
+        if ('BarcodeDetector' in window) {
+            console.log('Uzywam natywnego BarcodeDetector API');
+            try {
+                await this.startNativeScanner(onScanError);
+                return;
+            } catch (err) {
+                console.warn('BarcodeDetector nie dziala, fallback do html5-qrcode:', err);
+            }
+        }
+
+        // Fallback do html5-qrcode
+        await this.startHtml5QrCode(onScanError);
+    },
+
+    // Skaner natywny (BarcodeDetector API)
+    async startNativeScanner(onScanError) {
+        try {
+            // Uruchom kamere z wymuszonym autofokusem
+            this.videoStream = await navigator.mediaDevices.getUserMedia({
+                video: {
+                    facingMode: { ideal: 'environment' },
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
+                }
+            });
+
+            // Utworz element video
+            const container = document.getElementById(this.containerId);
+            container.innerHTML = '';
+
+            const video = document.createElement('video');
+            video.srcObject = this.videoStream;
+            video.setAttribute('playsinline', 'true');
+            video.style.width = '100%';
+            video.style.height = '100%';
+            video.style.objectFit = 'cover';
+            container.appendChild(video);
+
+            await video.play();
+
+            // Ustaw autofokus
+            const track = this.videoStream.getVideoTracks()[0];
+            const capabilities = track.getCapabilities();
+            if (capabilities.focusMode && capabilities.focusMode.includes('continuous')) {
+                await track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] });
+            }
+
+            // Utworz BarcodeDetector
+            this.barcodeDetector = new BarcodeDetector({
+                formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39']
+            });
+
+            this.isScanning = true;
+
+            // Skanuj co 200ms
+            this.scanInterval = setInterval(async () => {
+                if (!this.isScanning) return;
+
+                try {
+                    const barcodes = await this.barcodeDetector.detect(video);
+                    if (barcodes.length > 0) {
+                        this.onCodeScanned(barcodes[0].rawValue);
+                    }
+                } catch (err) {
+                    // Ignoruj bledy skanowania
+                }
+            }, 200);
+
+        } catch (err) {
+            console.error('Blad natywnego skanera:', err);
+            throw err;
+        }
+    },
+
+    // Skaner html5-qrcode (fallback)
+    async startHtml5QrCode(onScanError) {
         try {
             // Najpierw znajdz tylna kamere
             const cameras = await Html5Qrcode.getCameras();
@@ -44,7 +124,7 @@ const Scanner = {
             // Utworzenie instancji skanera
             this.html5QrCode = new Html5Qrcode(this.containerId);
 
-            // Konfiguracja skanera - bez videoConstraints bo powoduja problemy
+            // Konfiguracja skanera
             const config = {
                 fps: 10,
                 qrbox: { width: 250, height: 150 },
@@ -58,7 +138,7 @@ const Scanner = {
                 ]
             };
 
-            // Uruchomienie skanera z konkretna kamera lub facingMode
+            // Uruchomienie skanera
             if (cameraId) {
                 await this.html5QrCode.start(
                     cameraId,
@@ -76,8 +156,6 @@ const Scanner = {
             }
 
             this.isScanning = true;
-
-            // Poczekaj az video sie zaladuje, potem ustaw fokus
             setTimeout(() => this.tryEnableAutoFocus(), 500);
 
         } catch (err) {
@@ -118,15 +196,36 @@ const Scanner = {
 
     // Zatrzymanie skanera
     async stop() {
-        if (this.html5QrCode && this.isScanning) {
+        this.isScanning = false;
+
+        // Zatrzymaj natywny skaner
+        if (this.scanInterval) {
+            clearInterval(this.scanInterval);
+            this.scanInterval = null;
+        }
+
+        if (this.videoStream) {
+            this.videoStream.getTracks().forEach(track => track.stop());
+            this.videoStream = null;
+        }
+
+        // Zatrzymaj html5-qrcode
+        if (this.html5QrCode) {
             try {
                 await this.html5QrCode.stop();
                 this.html5QrCode.clear();
             } catch (err) {
                 console.error('Blad zatrzymywania skanera:', err);
             }
-            this.isScanning = false;
         }
+
+        // Wyczysc kontener
+        const container = document.getElementById(this.containerId);
+        if (container) {
+            container.innerHTML = '';
+        }
+
+        this.torchEnabled = false;
     },
 
     // Sprawdzenie czy skaner jest aktywny
@@ -134,35 +233,39 @@ const Scanner = {
         return this.isScanning;
     },
 
+    // Pobierz aktywny video track
+    getVideoTrack() {
+        // Najpierw sprawdz natywny stream
+        if (this.videoStream) {
+            const tracks = this.videoStream.getVideoTracks();
+            if (tracks.length > 0) return tracks[0];
+        }
+
+        // Potem sprawdz video element
+        const video = document.querySelector('#scanner-video-container video');
+        if (video && video.srcObject) {
+            const tracks = video.srcObject.getVideoTracks();
+            if (tracks.length > 0) return tracks[0];
+        }
+
+        return null;
+    },
+
     // Proba wlaczenia autofokusu na aktywnym strumieniu
     async tryEnableAutoFocus() {
         try {
-            // Poczekaj chwile az video bedzie gotowe
             await new Promise(r => setTimeout(r, 300));
 
-            const video = document.querySelector('#scanner-video-container video');
-            if (!video || !video.srcObject) {
-                console.warn('Video nie znalezione');
+            const track = this.getVideoTrack();
+            if (!track) {
+                console.warn('Brak video track');
                 return;
             }
 
-            const tracks = video.srcObject.getVideoTracks();
-            if (tracks.length === 0) {
-                console.warn('Brak video tracks');
-                return;
-            }
-
-            const track = tracks[0];
             const capabilities = track.getCapabilities ? track.getCapabilities() : {};
-            const settings = track.getSettings ? track.getSettings() : {};
 
-            console.log('Mozliwosci kamery:', capabilities);
-            console.log('Ustawienia kamery:', settings);
-
-            // Sprawdz czy fokus jest wspierany
             if (capabilities.focusMode) {
                 const focusModes = capabilities.focusMode;
-                console.log('Dostepne tryby fokusa:', focusModes);
 
                 if (focusModes.includes('continuous')) {
                     await track.applyConstraints({
@@ -175,15 +278,7 @@ const Scanner = {
                     });
                     console.log('Fokus auto wlaczony');
                 }
-            } else {
-                console.warn('Kamera nie wspiera focusMode');
             }
-
-            // Sprobuj ustawic ostrosc manualnie jesli to mozliwe
-            if (capabilities.focusDistance) {
-                console.log('Zakres focusDistance:', capabilities.focusDistance);
-            }
-
         } catch (err) {
             console.warn('Nie udalo sie ustawic autofokusu:', err);
         }
@@ -192,17 +287,14 @@ const Scanner = {
     // Przelaczanie latarki
     async toggleTorch() {
         try {
-            const video = document.querySelector('#scanner-video-container video');
-            if (!video || !video.srcObject) return false;
+            const track = this.getVideoTrack();
+            if (!track) return false;
 
-            const tracks = video.srcObject.getVideoTracks();
-            if (tracks.length === 0) return false;
-
-            const track = tracks[0];
             const capabilities = track.getCapabilities ? track.getCapabilities() : {};
 
             if (!capabilities.torch) {
                 console.warn('Latarka nie jest dostepna');
+                alert('Latarka nie jest dostepna na tym urzadzeniu');
                 return false;
             }
 
@@ -221,24 +313,20 @@ const Scanner = {
     // Reczne wymuszenie fokusa (tap-to-focus)
     async triggerFocus() {
         try {
-            const video = document.querySelector('#scanner-video-container video');
-            if (!video || !video.srcObject) return;
+            const track = this.getVideoTrack();
+            if (!track) return;
 
-            const tracks = video.srcObject.getVideoTracks();
-            if (tracks.length === 0) return;
-
-            const track = tracks[0];
             const capabilities = track.getCapabilities ? track.getCapabilities() : {};
 
-            // Przelacz miedzy manual a continuous zeby wymusic refokus
             if (capabilities.focusMode) {
+                // Przelacz na manual i z powrotem na continuous
                 if (capabilities.focusMode.includes('manual')) {
                     await track.applyConstraints({
                         advanced: [{ focusMode: 'manual' }]
                     });
-                    // Krotka pauza
                     await new Promise(r => setTimeout(r, 100));
                 }
+
                 if (capabilities.focusMode.includes('continuous')) {
                     await track.applyConstraints({
                         advanced: [{ focusMode: 'continuous' }]
