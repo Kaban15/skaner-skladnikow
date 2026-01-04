@@ -1,0 +1,178 @@
+{
+  "name": "Skaner Skladnikow - API",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "product-lookup",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "url": "=https://world.openfoodfacts.org/api/v2/product/{{ $json.body.barcode }}.json",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true
+            }
+          }
+        }
+      },
+      "id": "open-food-facts",
+      "name": "Open Food Facts API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 200],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "url": "=https://world.openbeautyfacts.org/api/v2/product/{{ $json.body.barcode }}.json",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true
+            }
+          }
+        }
+      },
+      "id": "open-beauty-facts",
+      "name": "Open Beauty Facts API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 400],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "mergeByFields": {
+          "values": []
+        },
+        "options": {}
+      },
+      "id": "merge-results",
+      "name": "Merge Results",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [750, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Pobierz wyniki z obu API\nconst items = $input.all();\n\nlet product = null;\nlet source = null;\n\n// Sprawdz Open Food Facts\nfor (const item of items) {\n  if (item.json.body && item.json.body.status === 1 && item.json.body.product) {\n    product = item.json.body.product;\n    source = 'openfoodfacts';\n    break;\n  }\n}\n\n// Jesli nie znaleziono, sprawdz Open Beauty Facts\nif (!product) {\n  for (const item of items) {\n    if (item.json.body && item.json.body.status === 1 && item.json.body.product) {\n      product = item.json.body.product;\n      source = 'openbeautyfacts';\n      break;\n    }\n  }\n}\n\nif (product) {\n  product._source = source;\n  return [{ json: { status: 'success', product: product } }];\n} else {\n  return [{ json: { status: 'error', message: 'Product not found' } }];\n}"
+      },
+      "id": "process-results",
+      "name": "Process Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1000, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "POST, OPTIONS"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type"
+              }
+            ]
+          }
+        }
+      },
+      "id": "respond-webhook",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1250, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Open Food Facts API",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Open Beauty Facts API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Open Food Facts API": {
+      "main": [
+        [
+          {
+            "node": "Merge Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Open Beauty Facts API": {
+      "main": [
+        [
+          {
+            "node": "Merge Results",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge Results": {
+      "main": [
+        [
+          {
+            "node": "Process Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Results": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0
+}

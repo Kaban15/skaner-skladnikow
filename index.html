@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skaner Skladnikow - Analiza produktow</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <h1>Skaner Skladnikow</h1>
+            <p class="subtitle">Sprawdz sklad produktow spozywczych i kosmetykow</p>
+        </header>
+
+        <!-- Input Section -->
+        <section class="input-section">
+            <div class="input-group">
+                <input
+                    type="text"
+                    id="barcode-input"
+                    placeholder="Wpisz kod kreskowy (EAN)..."
+                    pattern="[0-9]*"
+                    inputmode="numeric"
+                >
+                <button id="search-btn" class="btn btn-primary">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <path d="m21 21-4.3-4.3"></path>
+                    </svg>
+                    Szukaj
+                </button>
+            </div>
+            <div class="divider">
+                <span>lub</span>
+            </div>
+            <button id="scan-btn" class="btn btn-secondary btn-full">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 7V5a2 2 0 0 1 2-2h2"></path>
+                    <path d="M17 3h2a2 2 0 0 1 2 2v2"></path>
+                    <path d="M21 17v2a2 2 0 0 1-2 2h-2"></path>
+                    <path d="M7 21H5a2 2 0 0 1-2-2v-2"></path>
+                    <path d="M7 12h10"></path>
+                </svg>
+                Skanuj kamera
+            </button>
+        </section>
+
+        <!-- Scanner Section (hidden by default) -->
+        <section id="scanner-section" class="scanner-section hidden">
+            <div class="scanner-container">
+                <div id="scanner-video-container"></div>
+                <button id="close-scanner" class="btn btn-close">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M18 6 6 18"></path>
+                        <path d="m6 6 12 12"></path>
+                    </svg>
+                </button>
+            </div>
+        </section>
+
+        <!-- Loading -->
+        <section id="loading-section" class="loading-section hidden">
+            <div class="loader"></div>
+            <p>Szukam produktu...</p>
+        </section>
+
+        <!-- Error Section -->
+        <section id="error-section" class="error-section hidden">
+            <div class="error-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <path d="m15 9-6 6"></path>
+                    <path d="m9 9 6 6"></path>
+                </svg>
+            </div>
+            <h3>Nie znaleziono produktu</h3>
+            <p id="error-message">Sprawdz czy kod kreskowy jest poprawny</p>
+            <button id="retry-btn" class="btn btn-secondary">Sprobuj ponownie</button>
+        </section>
+
+        <!-- Results Section -->
+        <section id="results-section" class="results-section hidden">
+            <!-- Product Header -->
+            <div class="product-header">
+                <div class="product-image-container">
+                    <img id="product-image" src="" alt="Zdjecie produktu">
+                </div>
+                <div class="product-info">
+                    <h2 id="product-name">Nazwa produktu</h2>
+                    <p id="product-brand" class="product-brand">Marka</p>
+                    <p id="product-quantity" class="product-quantity">Ilosc</p>
+                </div>
+            </div>
+
+            <!-- Scores -->
+            <div class="scores-container">
+                <div id="nutriscore-container" class="score-card">
+                    <h4>Nutri-Score</h4>
+                    <div id="nutriscore" class="score-badge">-</div>
+                    <p class="score-description">Wartosc odzywcza</p>
+                </div>
+                <div id="nova-container" class="score-card">
+                    <h4>NOVA</h4>
+                    <div id="nova-score" class="score-badge nova">-</div>
+                    <p class="score-description">Stopien przetworzenia</p>
+                </div>
+                <div id="ecoscore-container" class="score-card">
+                    <h4>Eco-Score</h4>
+                    <div id="ecoscore" class="score-badge">-</div>
+                    <p class="score-description">Wplyw na srodowisko</p>
+                </div>
+            </div>
+
+            <!-- Warnings -->
+            <div id="warnings-container" class="warnings-container hidden">
+                <h3>Ostrzezenia</h3>
+                <div id="warnings-list" class="warnings-list"></div>
+            </div>
+
+            <!-- Allergens -->
+            <div id="allergens-container" class="allergens-container hidden">
+                <h3>Alergeny</h3>
+                <div id="allergens-list" class="allergens-list"></div>
+            </div>
+
+            <!-- Nutrition Facts -->
+            <div id="nutrition-container" class="nutrition-container">
+                <h3>Wartosci odzywcze <span class="per-100">na 100g/100ml</span></h3>
+                <div class="nutrition-table">
+                    <div class="nutrition-row header">
+                        <span>Skladnik</span>
+                        <span>Wartosc</span>
+                        <span>% RWS</span>
+                    </div>
+                    <div id="nutrition-list"></div>
+                </div>
+            </div>
+
+            <!-- Ingredients -->
+            <div id="ingredients-container" class="ingredients-container">
+                <h3>Sklad</h3>
+                <div id="ingredients-text" class="ingredients-text"></div>
+            </div>
+
+            <!-- Additives -->
+            <div id="additives-container" class="additives-container hidden">
+                <h3>Dodatki (E)</h3>
+                <div id="additives-list" class="additives-list"></div>
+            </div>
+
+            <!-- Analysis Summary -->
+            <div id="analysis-container" class="analysis-container">
+                <h3>Podsumowanie analizy</h3>
+                <div id="analysis-summary" class="analysis-summary"></div>
+            </div>
+
+            <!-- New Search Button -->
+            <button id="new-search-btn" class="btn btn-primary btn-full">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 7V5a2 2 0 0 1 2-2h2"></path>
+                    <path d="M17 3h2a2 2 0 0 1 2 2v2"></path>
+                    <path d="M21 17v2a2 2 0 0 1-2 2h-2"></path>
+                    <path d="M7 21H5a2 2 0 0 1-2-2v-2"></path>
+                    <path d="M7 12h10"></path>
+                </svg>
+                Skanuj kolejny produkt
+            </button>
+        </section>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>Dane z <a href="https://world.openfoodfacts.org" target="_blank">Open Food Facts</a> i <a href="https://world.openbeautyfacts.org" target="_blank">Open Beauty Facts</a></p>
+        </footer>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <script src="js/analyzer.js"></script>
+    <script src="js/scanner.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

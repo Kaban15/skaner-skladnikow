@@ -1,0 +1,182 @@
+================================================================================
+                    SKANER SKLADNIKOW - INSTRUKCJA WDROZENIA
+================================================================================
+
+Aplikacja do analizy skladu produktow spozywczych i kosmetykow na podstawie
+kodu kreskowego (EAN).
+
+================================================================================
+                              STRUKTURA PROJEKTU
+================================================================================
+
+sklad/
+├── index.html              # Glowna strona aplikacji
+├── css/
+│   └── style.css           # Style (responsywne, dark mode)
+├── js/
+│   ├── app.js              # Glowna logika aplikacji
+│   ├── scanner.js          # Skaner kodow kreskowych
+│   └── analyzer.js         # Analizator skladnikow
+├── n8n-workflow.json       # Workflow do importu w n8n
+└── INSTRUKCJA.txt          # Ten plik
+
+================================================================================
+                         KROK 1: KONFIGURACJA N8N
+================================================================================
+
+1. Zaloguj sie do swojego n8n
+
+2. Utworz nowy workflow:
+   - Kliknij "Add workflow" lub "+"
+   - Kliknij na 3 kropki w prawym gornym rogu
+   - Wybierz "Import from file"
+   - Wybierz plik: n8n-workflow.json
+
+3. LUB stworz workflow recznie:
+
+   a) Dodaj node "Webhook":
+      - HTTP Method: POST
+      - Path: product-lookup
+      - Response Mode: Using 'Respond to Webhook' node
+
+   b) Dodaj 2x node "HTTP Request" (rownolegle):
+
+      Pierwszy (Open Food Facts):
+      - URL: https://world.openfoodfacts.org/api/v2/product/{{ $json.body.barcode }}.json
+      - Method: GET
+      - Continue On Fail: ON
+
+      Drugi (Open Beauty Facts):
+      - URL: https://world.openbeautyfacts.org/api/v2/product/{{ $json.body.barcode }}.json
+      - Method: GET
+      - Continue On Fail: ON
+
+   c) Dodaj node "Merge":
+      - Mode: Combine
+      - Polacz oba HTTP Request do tego node'a
+
+   d) Dodaj node "Code":
+      - Wklej kod z pliku n8n-workflow.json (sekcja "Process Results")
+
+   e) Dodaj node "Respond to Webhook":
+      - Respond With: JSON
+      - Response Body: {{ $json }}
+      - Dodaj headery CORS (patrz ponizej)
+
+4. Aktywuj workflow:
+   - Kliknij przelacznik "Active" w prawym gornym rogu
+
+5. Skopiuj URL webhooka:
+   - Kliknij na node "Webhook"
+   - Skopiuj "Production URL" (np. https://twoja-domena.n8n.cloud/webhook/product-lookup)
+
+================================================================================
+                      KROK 2: KONFIGURACJA APLIKACJI
+================================================================================
+
+1. Otworz plik: js/app.js
+
+2. Znajdz linie (okolo linii 10):
+
+   n8nWebhookUrl: 'TWOJ_N8N_WEBHOOK_URL',
+
+3. Zamien 'TWOJ_N8N_WEBHOOK_URL' na skopiowany URL webhooka:
+
+   n8nWebhookUrl: 'https://twoja-domena.n8n.cloud/webhook/product-lookup',
+
+4. Zapisz plik
+
+================================================================================
+                       KROK 3: WGRANIE NA HOSTINGER
+================================================================================
+
+1. Zaloguj sie do panelu Hostingera
+
+2. Przejdz do File Manager lub uzyj FTP:
+   - Host: ftp.twoja-domena.pl (lub z panelu)
+   - Login: twoj login FTP
+   - Haslo: twoje haslo FTP
+
+3. Przejdz do katalogu public_html (lub htdocs)
+
+4. Wgraj wszystkie pliki:
+   - index.html
+   - css/style.css
+   - js/app.js
+   - js/scanner.js
+   - js/analyzer.js
+
+5. Otworz strone: https://twoja-domena.pl
+
+================================================================================
+                           ROZWIAZYWANIE PROBLEMOW
+================================================================================
+
+PROBLEM: Skaner kamery nie dziala
+ROZWIAZANIE:
+- Strona musi byc serwowana przez HTTPS (Hostinger ma darmowy SSL)
+- Przegladarka musi miec uprawnienia do kamery
+- Sprawdz czy urzadzenie ma kamere
+
+PROBLEM: "Nie znaleziono produktu"
+ROZWIAZANIE:
+- Sprawdz czy kod kreskowy jest poprawny (13 lub 8 cyfr)
+- Nie wszystkie produkty sa w bazie Open Food Facts
+- Mozesz dodac produkt na: https://world.openfoodfacts.org
+
+PROBLEM: Blad CORS (w konsoli przegladarki)
+ROZWIAZANIE:
+- Upewnij sie, ze w n8n masz ustawione headery CORS:
+  Access-Control-Allow-Origin: *
+  Access-Control-Allow-Methods: POST, OPTIONS
+  Access-Control-Allow-Headers: Content-Type
+
+PROBLEM: Aplikacja nie laczy sie z n8n
+ROZWIAZANIE:
+- Sprawdz czy workflow jest aktywny
+- Sprawdz czy URL webhooka jest poprawny
+- Aplikacja automatycznie uzyje bezposredniego API jako fallback
+
+================================================================================
+                              TESTOWE KODY EAN
+================================================================================
+
+Mozesz przetestowac aplikacje tymi kodami:
+
+PRODUKTY SPOZYWCZE:
+- 5900259128553  (Tymbark sok)
+- 5901234123457  (Przykladowy produkt)
+- 8711327538436  (Ritter Sport)
+- 5901067400015  (Pudliszki)
+
+KOSMETYKI:
+- 3600523364473  (L'Oreal)
+- 5900003456789  (Przykladowy kosmetyk)
+
+================================================================================
+                           DALSZY ROZWOJ APLIKACJI
+================================================================================
+
+Mozliwe rozszerzenia:
+1. Historia skanowanych produktow (localStorage)
+2. Porownywanie produktow
+3. Lista ulubionych
+4. Eksport do PDF
+5. Powiadomienia o alergenach
+6. PWA (instalacja na telefonie)
+
+Zrodla danych:
+- Open Food Facts: https://world.openfoodfacts.org
+- Open Beauty Facts: https://world.openbeautyfacts.org
+- Open Pet Food Facts: https://world.openpetfoodfacts.org
+- Open Products Facts: https://world.openproductsfacts.org
+
+================================================================================
+                                  KONTAKT
+================================================================================
+
+Jesli potrzebujesz pomocy:
+- Open Food Facts Wiki: https://wiki.openfoodfacts.org
+- n8n Documentation: https://docs.n8n.io
+
+================================================================================
