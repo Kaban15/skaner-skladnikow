@@ -155,10 +155,9 @@ const App = {
             return;
         }
 
-        // Walidacja kodu
-        const validation = Scanner.validateBarcode(barcode);
-        if (!validation.valid) {
-            this.showError(validation.error);
+        // Walidacja kodu (podstawowa)
+        if (!/^\d{8,14}$/.test(barcode)) {
+            this.showError('Kod kreskowy musi zawierac od 8 do 14 cyfr');
             return;
         }
 
@@ -503,7 +502,6 @@ const App = {
         this.elements.loadingSection.classList.add('hidden');
         this.elements.errorSection.classList.add('hidden');
         this.elements.resultsSection.classList.add('hidden');
-        this.elements.scannerSection.classList.add('hidden');
     },
 
     // Reset do stanu poczatkowego
