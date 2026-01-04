@@ -27,6 +27,7 @@ const App = {
     init() {
         this.cacheElements();
         this.bindEvents();
+        this.displayHistory();
 
         // Sprawdzenie czy konfiguracja jest ustawiona
         if (this.config.n8nWebhookUrl === 'TWOJ_N8N_WEBHOOK_URL') {
@@ -46,6 +47,10 @@ const App = {
             resultsSection: document.getElementById('results-section'),
             newSearchBtn: document.getElementById('new-search-btn'),
             inputSection: document.querySelector('.input-section'),
+            // Historia
+            historySection: document.getElementById('history-section'),
+            historyList: document.getElementById('history-list'),
+            clearHistoryBtn: document.getElementById('clear-history-btn'),
 
             // Wyniki
             productImage: document.getElementById('product-image'),
@@ -108,6 +113,11 @@ const App = {
         }
         if (this.elements.newSearchBtn) {
             this.elements.newSearchBtn.addEventListener('click', () => this.resetToInput());
+        }
+
+        // Historia
+        if (this.elements.clearHistoryBtn) {
+            this.elements.clearHistoryBtn.addEventListener('click', () => this.clearHistory());
         }
 
         // Dodawanie skladu
@@ -267,6 +277,10 @@ const App = {
         this.hideAllSections();
         this.elements.resultsSection.classList.remove('hidden');
         this.elements.inputSection.classList.add('hidden');
+        this.elements.historySection.classList.add('hidden');
+
+        // Zapisz do historii
+        this.saveToHistory(product);
 
         // Podstawowe informacje
         this.elements.productName.textContent = product.product_name || product.product_name_pl || 'Nieznana nazwa';
@@ -511,6 +525,7 @@ const App = {
         this.elements.barcodeInput.value = '';
         this.elements.barcodeInput.focus();
         this.state.currentProduct = null;
+        this.displayHistory();
     },
 
     // ========== OBSLUGA DODAWANIA SKLADU ==========
@@ -743,6 +758,96 @@ const App = {
         const barcode = product?.code || product?._id;
         if (!barcode) return null;
         return this.getStoredIngredients(barcode);
+    },
+
+    // ========== HISTORIA PRODUKTOW ==========
+
+    // Maksymalna liczba produktow w historii
+    maxHistoryItems: 10,
+
+    // Zapisz produkt do historii
+    saveToHistory(product) {
+        if (!product) return;
+
+        const barcode = product.code || product._id;
+        if (!barcode) return;
+
+        const historyItem = {
+            barcode: barcode,
+            name: product.product_name || product.product_name_pl || 'Nieznana nazwa',
+            brand: product.brands || '',
+            image: product.image_url || product.image_front_url || product.image_front_small_url || null,
+            nutriscore: product.nutriscore_grade || null,
+            timestamp: Date.now()
+        };
+
+        let history = this.getHistory();
+
+        // Usun jesli juz istnieje (aby przeniesc na gore)
+        history = history.filter(item => item.barcode !== barcode);
+
+        // Dodaj na poczatek
+        history.unshift(historyItem);
+
+        // Ogranicz rozmiar
+        if (history.length > this.maxHistoryItems) {
+            history = history.slice(0, this.maxHistoryItems);
+        }
+
+        localStorage.setItem('productHistory', JSON.stringify(history));
+        this.displayHistory();
+    },
+
+    // Pobierz historie
+    getHistory() {
+        try {
+            return JSON.parse(localStorage.getItem('productHistory') || '[]');
+        } catch (e) {
+            return [];
+        }
+    },
+
+    // Wyczysc historie
+    clearHistory() {
+        localStorage.removeItem('productHistory');
+        this.displayHistory();
+    },
+
+    // Wyswietl historie
+    displayHistory() {
+        const history = this.getHistory();
+
+        if (history.length === 0) {
+            this.elements.historySection.classList.add('hidden');
+            return;
+        }
+
+        this.elements.historySection.classList.remove('hidden');
+
+        this.elements.historyList.innerHTML = history.map(item => {
+            const imageUrl = item.image || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="%2394a3b8" stroke-width="1"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>';
+            const nutriscoreBadge = item.nutriscore
+                ? `<span class="history-nutriscore grade-${item.nutriscore.toLowerCase()}">${item.nutriscore.toUpperCase()}</span>`
+                : '';
+
+            return `<div class="history-item" data-barcode="${item.barcode}">
+                <img src="${imageUrl}" alt="${item.name}" class="history-image" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2240%22 height=%2240%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%2394a3b8%22 stroke-width=%221%22><rect x=%223%22 y=%223%22 width=%2218%22 height=%2218%22 rx=%222%22/></svg>'">
+                <div class="history-info">
+                    <span class="history-name">${item.name}</span>
+                    <span class="history-brand">${item.brand}</span>
+                </div>
+                ${nutriscoreBadge}
+            </div>`;
+        }).join('');
+
+        // Dodaj event listeners do elementow historii
+        this.elements.historyList.querySelectorAll('.history-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const barcode = item.dataset.barcode;
+                this.elements.barcodeInput.value = barcode;
+                this.searchProduct(barcode);
+            });
+        });
     }
 };
 
