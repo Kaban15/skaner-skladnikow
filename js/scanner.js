@@ -23,19 +23,31 @@ const Scanner = {
         this.onScanCallback = onScanSuccess;
 
         try {
+            // Najpierw znajdz tylna kamere
+            const cameras = await Html5Qrcode.getCameras();
+            let cameraId = null;
+
+            // Szukaj kamery tylnej (environment/back)
+            for (const camera of cameras) {
+                const label = camera.label.toLowerCase();
+                if (label.includes('back') || label.includes('rear') || label.includes('environment') || label.includes('tylna') || label.includes('0')) {
+                    cameraId = camera.id;
+                    break;
+                }
+            }
+
+            // Jesli nie znaleziono, uzyj ostatniej kamery (zazwyczaj tylna)
+            if (!cameraId && cameras.length > 0) {
+                cameraId = cameras[cameras.length - 1].id;
+            }
+
             // Utworzenie instancji skanera
             this.html5QrCode = new Html5Qrcode(this.containerId);
 
-            // Konfiguracja skanera
+            // Konfiguracja skanera - bez videoConstraints bo powoduja problemy
             const config = {
-                fps: 15,
-                qrbox: { width: 280, height: 180 },
-                aspectRatio: 1.5,
-                videoConstraints: {
-                    width: { ideal: 1280 },
-                    height: { ideal: 720 },
-                    facingMode: "environment"
-                },
+                fps: 10,
+                qrbox: { width: 250, height: 150 },
                 formatsToSupport: [
                     Html5QrcodeSupportedFormats.EAN_13,
                     Html5QrcodeSupportedFormats.EAN_8,
@@ -46,31 +58,27 @@ const Scanner = {
                 ]
             };
 
-            // Uruchomienie skanera z kamera tylna (preferowana) z autofokusem
-            const cameraConfig = {
-                facingMode: "environment",
-                advanced: [
-                    { focusMode: "continuous" },
-                    { autoFocusMode: "continuous" }
-                ]
-            };
-
-            await this.html5QrCode.start(
-                cameraConfig,
-                config,
-                (decodedText, decodedResult) => {
-                    // Kod zostal zeskanowany
-                    this.onCodeScanned(decodedText, decodedResult);
-                },
-                (errorMessage) => {
-                    // Blad skanowania (ignorujemy - to normalne gdy nie ma kodu w kadrze)
-                }
-            );
+            // Uruchomienie skanera z konkretna kamera lub facingMode
+            if (cameraId) {
+                await this.html5QrCode.start(
+                    cameraId,
+                    config,
+                    (decodedText) => this.onCodeScanned(decodedText),
+                    () => {}
+                );
+            } else {
+                await this.html5QrCode.start(
+                    { facingMode: "environment" },
+                    config,
+                    (decodedText) => this.onCodeScanned(decodedText),
+                    () => {}
+                );
+            }
 
             this.isScanning = true;
 
-            // Proba wymuszenia autofokusu
-            this.tryEnableAutoFocus();
+            // Poczekaj az video sie zaladuje, potem ustaw fokus
+            setTimeout(() => this.tryEnableAutoFocus(), 500);
 
         } catch (err) {
             console.error('Blad uruchamiania skanera:', err);
@@ -129,26 +137,51 @@ const Scanner = {
     // Proba wlaczenia autofokusu na aktywnym strumieniu
     async tryEnableAutoFocus() {
         try {
+            // Poczekaj chwile az video bedzie gotowe
+            await new Promise(r => setTimeout(r, 300));
+
             const video = document.querySelector('#scanner-video-container video');
-            if (!video || !video.srcObject) return;
+            if (!video || !video.srcObject) {
+                console.warn('Video nie znalezione');
+                return;
+            }
 
             const tracks = video.srcObject.getVideoTracks();
-            if (tracks.length === 0) return;
+            if (tracks.length === 0) {
+                console.warn('Brak video tracks');
+                return;
+            }
 
             const track = tracks[0];
             const capabilities = track.getCapabilities ? track.getCapabilities() : {};
+            const settings = track.getSettings ? track.getSettings() : {};
+
+            console.log('Mozliwosci kamery:', capabilities);
+            console.log('Ustawienia kamery:', settings);
 
             // Sprawdz czy fokus jest wspierany
-            if (capabilities.focusMode && capabilities.focusMode.includes('continuous')) {
-                await track.applyConstraints({
-                    advanced: [{ focusMode: 'continuous' }]
-                });
-                console.log('Autofokus wlaczony');
-            } else if (capabilities.focusMode && capabilities.focusMode.includes('auto')) {
-                await track.applyConstraints({
-                    advanced: [{ focusMode: 'auto' }]
-                });
-                console.log('Fokus auto wlaczony');
+            if (capabilities.focusMode) {
+                const focusModes = capabilities.focusMode;
+                console.log('Dostepne tryby fokusa:', focusModes);
+
+                if (focusModes.includes('continuous')) {
+                    await track.applyConstraints({
+                        advanced: [{ focusMode: 'continuous' }]
+                    });
+                    console.log('Autofokus continuous wlaczony');
+                } else if (focusModes.includes('auto')) {
+                    await track.applyConstraints({
+                        advanced: [{ focusMode: 'auto' }]
+                    });
+                    console.log('Fokus auto wlaczony');
+                }
+            } else {
+                console.warn('Kamera nie wspiera focusMode');
+            }
+
+            // Sprobuj ustawic ostrosc manualnie jesli to mozliwe
+            if (capabilities.focusDistance) {
+                console.log('Zakres focusDistance:', capabilities.focusDistance);
             }
 
         } catch (err) {
