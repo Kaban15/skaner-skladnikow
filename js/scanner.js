@@ -27,9 +27,14 @@ const Scanner = {
 
             // Konfiguracja skanera
             const config = {
-                fps: 10,
-                qrbox: { width: 250, height: 150 },
-                aspectRatio: 1.333,
+                fps: 15,
+                qrbox: { width: 280, height: 180 },
+                aspectRatio: 1.5,
+                videoConstraints: {
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 },
+                    facingMode: "environment"
+                },
                 formatsToSupport: [
                     Html5QrcodeSupportedFormats.EAN_13,
                     Html5QrcodeSupportedFormats.EAN_8,
@@ -40,9 +45,17 @@ const Scanner = {
                 ]
             };
 
-            // Uruchomienie skanera z kamera tylna (preferowana)
+            // Uruchomienie skanera z kamera tylna (preferowana) z autofokusem
+            const cameraConfig = {
+                facingMode: "environment",
+                advanced: [
+                    { focusMode: "continuous" },
+                    { autoFocusMode: "continuous" }
+                ]
+            };
+
             await this.html5QrCode.start(
-                { facingMode: "environment" },
+                cameraConfig,
                 config,
                 (decodedText, decodedResult) => {
                     // Kod zostal zeskanowany
