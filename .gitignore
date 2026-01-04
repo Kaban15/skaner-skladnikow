@@ -1,1 +1,5 @@
 .vercel
+deploy.py
+server_cmd.py
+test_ssh.py
+.claude/
