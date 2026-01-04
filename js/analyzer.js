@@ -3,6 +3,106 @@
  */
 
 const Analyzer = {
+    // Baza skladnikow z ocena ryzyka zdrowotnego
+    ingredientsDatabase: {
+        // === CUKRY I SLODZIKI ===
+        'cukier': { risk: 'high', category: 'cukry', description: 'Prosty cukier (sacharoza) - podnosi poziom glukozy we krwi, sprzyja otylosci, próchnicy, cukrzycy typu 2 i chorobom serca przy nadmiernym spozyciu.' },
+        'sacharoza': { risk: 'high', category: 'cukry', description: 'Cukier stołowy - szybko podnosi poziom cukru we krwi, moze prowadzic do insulinoopornosci.' },
+        'glukoza': { risk: 'high', category: 'cukry', description: 'Cukier prosty - natychmiast podnosi poziom cukru we krwi, nadmiar sprzyja otylosci.' },
+        'fruktoza': { risk: 'high', category: 'cukry', description: 'Cukier owocowy - w duzych ilosciach obciaza watrobe, sprzyja stluszczeniu watroby i otylosci brzusznej.' },
+        'syrop glukozowo-fruktozowy': { risk: 'high', category: 'cukry', description: 'Wysoko przetworzony slodzik - silnie sprzyja otylosci, stluszczeniu watroby i cukrzycy. Jeden z najbardziej szkodliwych skladnikow.' },
+        'syrop glukozowy': { risk: 'high', category: 'cukry', description: 'Skoncentrowany cukier - szybko podnosi poziom glukozy, sprzyja otylosci i cukrzycy.' },
+        'syrop fruktozowy': { risk: 'high', category: 'cukry', description: 'Wysokofruktozowy syrop - obciaza watrobe, sprzyja stluszczeniu i otylosci brzusznej.' },
+        'dekstroza': { risk: 'high', category: 'cukry', description: 'Glukoza z kukurydzy - bardzo szybko podnosi poziom cukru we krwi.' },
+        'maltodekstryna': { risk: 'moderate', category: 'cukry', description: 'Weglowodany o wysokim indeksie glikemicznym - szybko podnosi cukier we krwi, moze zaklocac mikrobiom jelitowy.' },
+        'melasa': { risk: 'moderate', category: 'cukry', description: 'Produkt uboczny produkcji cukru - zawiera mineraly, ale nadal jest cukrem prostym.' },
+        'miód': { risk: 'moderate', category: 'cukry', description: 'Naturalny slodzik - zawiera korzystne zwiazki, ale nadal jest cukrem. Lepszy niz bialy cukier, ale w umiarkowanych ilosciach.' },
+        'cukier trzcinowy': { risk: 'high', category: 'cukry', description: 'Taki sam jak bialy cukier pod wzgledem wplywu na zdrowie, mimo marketingu "naturalnosci".' },
+        'cukier brazowy': { risk: 'high', category: 'cukry', description: 'Cukier z melasa - minimalnie wiecej mineralow, ale identyczny wplyw na organizm jak bialy cukier.' },
+        'cukier kokosowy': { risk: 'moderate', category: 'cukry', description: 'Nieco nizszy indeks glikemiczny, ale nadal cukier. Zawiera inuline.' },
+        'syrop klonowy': { risk: 'moderate', category: 'cukry', description: 'Zawiera antyoksydanty i mineraly, ale jest wysoko skoncentrowanym cukrem.' },
+        'syrop z agawy': { risk: 'high', category: 'cukry', description: 'Bardzo wysoka zawartosc fruktozy (do 90%) - silnie obciaza watrobe, gorszy niz zwykly cukier.' },
+        'izoglukoza': { risk: 'high', category: 'cukry', description: 'Syrop glukozowo-fruktozowy - jeden z najbardziej szkodliwych slodzikow przemyslowych.' },
+
+        // === TLUSZCZE ===
+        'olej palmowy': { risk: 'high', category: 'tluszcze', description: 'Wysoka zawartosc tluszczów nasyconych - podnosi cholesterol LDL, zwieksza ryzyko chorób serca. Problematyczny ekologicznie.' },
+        'tluszcz palmowy': { risk: 'high', category: 'tluszcze', description: 'Tluszcze nasycone - podnosza cholesterol, zwieksza ryzyko miazdzycy i zawalu.' },
+        'olej kokosowy': { risk: 'moderate', category: 'tluszcze', description: 'Wysoka zawartosc tluszczów nasyconych, ale zawiera MCT. Kontrowersyjny - w umiarkowanych ilosciach.' },
+        'tluszcz kokosowy': { risk: 'moderate', category: 'tluszcze', description: 'Tluszcze nasycone z kwasem laurynowym. Lepszy niz palmowy, ale nadal w umiarkowanych ilosciach.' },
+        'maslo': { risk: 'moderate', category: 'tluszcze', description: 'Zrodlo tluszczów nasyconych - podnosi cholesterol, ale zawiera witaminy A, D, E, K. W umiarkowanych ilosciach.' },
+        'smalec': { risk: 'high', category: 'tluszcze', description: 'Tluszcz zwierzecy - bardzo wysoka zawartosc tluszczów nasyconych i cholesterolu.' },
+        'margaryna': { risk: 'moderate', category: 'tluszcze', description: 'Moze zawierac tluszcze trans (jesli czesciowo utwardzana). Sprawdz etykiete.' },
+        'tluszcz roslinny': { risk: 'moderate', category: 'tluszcze', description: 'Zalezy od zrodla - moze byc utwardzony (tluszcze trans) lub zawierac olej palmowy.' },
+        'tluszcz roslinny utwardzony': { risk: 'high', category: 'tluszcze', description: 'Zawiera tluszcze trans - najbardziej szkodliwe tluszcze, silnie zwieksza ryzyko chorób serca.' },
+        'tluszcze utwardzone': { risk: 'high', category: 'tluszcze', description: 'Tluszcze trans - zwieksza LDL, obniza HDL, promuje stany zapalne i choroby serca.' },
+        'olej rzepakowy': { risk: 'low', category: 'tluszcze', description: 'Korzystny profil kwasów tluszczowych - omega-3 i omega-6. Dobry wybór.' },
+        'olej slonecznikowy': { risk: 'low', category: 'tluszcze', description: 'Bogaty w witamine E, ale wysoka zawartosc omega-6. W umiarkowanych ilosciach.' },
+        'olej oliwkowy': { risk: 'low', category: 'tluszcze', description: 'Bardzo korzystny - bogaty w jednonienasycone kwasy tluszczowe i polifenole. Chroni serce.' },
+        'oliwa z oliwek': { risk: 'low', category: 'tluszcze', description: 'Najzdrowszy tluszcz - przeciwzapalna, chroni serce, bogata w antyoksydanty.' },
+        'olej lniany': { risk: 'low', category: 'tluszcze', description: 'Doskonale zrodlo omega-3. Bardzo korzystny dla zdrowia.' },
+        'olej sojowy': { risk: 'moderate', category: 'tluszcze', description: 'Wysoka zawartosc omega-6 - w nadmiarze moze promowac stany zapalne.' },
+
+        // === SÓL I SÓDOWANIE ===
+        'sól': { risk: 'moderate', category: 'sol', description: 'Niezbedna w malych ilosciach, ale nadmiar podnosi cisnienie krwi i zwieksza ryzyko udaru i chorób serca.' },
+        'sól morska': { risk: 'moderate', category: 'sol', description: 'Taka sama zawartosc sodu jak sól kuchenna. Sladowe ilosci mineralów nie rekompensuja ryzyka.' },
+        'chlorek sodu': { risk: 'moderate', category: 'sol', description: 'Sól kuchenna - nadmiar zwieksza ryzyko nadcisnienia i chorób sercowo-naczyniowych.' },
+
+        // === MĄKI I SKROBIE ===
+        'maka pszenna': { risk: 'low', category: 'maki', description: 'Podstawowy skladnik - zawiera gluten. Rafinowana maka (biala) ma wysoki indeks glikemiczny.' },
+        'maka pszenna rafinowana': { risk: 'moderate', category: 'maki', description: 'Pozbawiona blonnika i witamin - szybko podnosi cukier we krwi.' },
+        'skrobia': { risk: 'low', category: 'maki', description: 'Naturalny weglowodany - w umiarkowanych ilosciach neutralna.' },
+        'skrobia modyfikowana': { risk: 'moderate', category: 'maki', description: 'Chemicznie przetworzona skrobia - moze wplywac na mikrobiom jelitowy.' },
+        'skrobia kukurydziana': { risk: 'low', category: 'maki', description: 'Naturalna skrobia - neutralna w umiarkowanych ilosciach.' },
+        'maka pelnoziarnista': { risk: 'low', category: 'maki', description: 'Korzystna - zawiera blonnik, witaminy i mineraly. Nizszy indeks glikemiczny.' },
+
+        // === NABIAŁ ===
+        'mleko': { risk: 'low', category: 'nabial', description: 'Zrodlo wapnia i bialka. Dla osób tolerujacych laktoze - neutralne lub korzystne.' },
+        'mleko w proszku': { risk: 'low', category: 'nabial', description: 'Mleko odwodnione - podobne wlasciwosci jak mleko, ale utleniony cholesterol.' },
+        'serum mleczne': { risk: 'low', category: 'nabial', description: 'Produkt uboczny produkcji sera - zawiera laktoze i bialka serwatkowe.' },
+        'serwatka': { risk: 'low', category: 'nabial', description: 'Bialko wysokiej jakosci - korzystne dla budowy miesni.' },
+        'laktoza': { risk: 'low', category: 'nabial', description: 'Cukier mleczny - problematyczny tylko dla osób z nietolerancja laktozy.' },
+        'kazeina': { risk: 'low', category: 'nabial', description: 'Bialko mleka - wolno trawione, dobre zrodlo aminokwasów.' },
+        'smietana': { risk: 'moderate', category: 'nabial', description: 'Wysoka zawartosc tluszczów nasyconych - w umiarkowanych ilosciach.' },
+
+        // === BIALKA ===
+        'bialko sojowe': { risk: 'low', category: 'bialka', description: 'Pelne bialko roslinne - korzystne, ale niektórzy maja alergie.' },
+        'izolat bialka sojowego': { risk: 'low', category: 'bialka', description: 'Skoncentrowane bialko soi - dobre zrodlo aminokwasów.' },
+        'bialko pszenicy': { risk: 'low', category: 'bialka', description: 'Gluten - problematyczny dla celiakii i wrazliwosci na gluten.' },
+        'gluten pszenny': { risk: 'moderate', category: 'bialka', description: 'Bialko pszenicy - szkodliwy dla osób z celiakia lub wrazliwoscia na gluten.' },
+
+        // === WARZYWA I OWOCE ===
+        'koncentrat pomidorowy': { risk: 'low', category: 'warzywa', description: 'Bogaty w likopen - antyoksydant chroniacy przed rakiem.' },
+        'cebula': { risk: 'low', category: 'warzywa', description: 'Korzystna - zawiera prebiotyki i przeciwzapalne zwiazki siarkowe.' },
+        'czosnek': { risk: 'low', category: 'warzywa', description: 'Bardzo korzystny - przeciwbakteryjny, obniza cisnienie, wspiera odpornosc.' },
+        'marchew': { risk: 'low', category: 'warzywa', description: 'Bogata w beta-karoten - korzystna dla wzroku i skóry.' },
+        'ziemniaki': { risk: 'low', category: 'warzywa', description: 'Zrodlo witaminy C i potasu. Wysoki indeks glikemiczny gdy gotowane.' },
+
+        // === PRZYPRAWY ===
+        'pieprz': { risk: 'low', category: 'przyprawy', description: 'Korzystny - zawiera piperyne poprawiajaca wchlaniaie skladników odzywczych.' },
+        'papryka': { risk: 'low', category: 'przyprawy', description: 'Bogata w witamine C i antyoksydanty. Korzystna.' },
+        'kurkuma': { risk: 'low', category: 'przyprawy', description: 'Silne wlasciwosci przeciwzapalne - kurkumina wspiera zdrowie.' },
+        'imbir': { risk: 'low', category: 'przyprawy', description: 'Przeciwzapalny, wspomaga trawienie, lagodzi nudnosci.' },
+        'cynamon': { risk: 'low', category: 'przyprawy', description: 'Moze pomagac regulowac cukier we krwi. Korzystny w umiarkowanych ilosciach.' },
+
+        // === SUBSTANCJE PROBLEMATYCZNE ===
+        'glutaminian sodu': { risk: 'moderate', category: 'dodatki', description: 'Wzmacniacz smaku (MSG) - u wrazliwych osób moze powodowac bóle glowy i rumienie.' },
+        'aromaty': { risk: 'moderate', category: 'dodatki', description: 'Moga byc naturalne lub syntetyczne. Brak pelnej przejrzystosci co do skladu.' },
+        'aromat': { risk: 'moderate', category: 'dodatki', description: 'Substancja smakowa - czesto ukrywa sie za tym wiele chemikaliów.' },
+        'naturalny aromat': { risk: 'low', category: 'dodatki', description: 'Pochodzenie naturalne, ale moze byc przetworzony. Generalnie bezpieczny.' },
+        'aromat naturalny': { risk: 'low', category: 'dodatki', description: 'Ekstrakt z naturalnych zródel - zazwyczaj bezpieczny.' },
+        'sztuczny aromat': { risk: 'moderate', category: 'dodatki', description: 'Syntetyczne substancje smakowe - bezpieczenstwo niektórych kwestionowane.' },
+        'barwnik': { risk: 'moderate', category: 'dodatki', description: 'Moze byc naturalny lub syntetyczny. Syntetyczne moga powodowac alergie.' },
+        'regulator kwasowosci': { risk: 'low', category: 'dodatki', description: 'Zazwyczaj bezpieczne kwasy organiczne jak cytrynowy czy mlekowy.' },
+        'emulgator': { risk: 'low', category: 'dodatki', description: 'Laczy tluszcze z woda - wiekszosc jest bezpieczna.' },
+        'stabilizator': { risk: 'low', category: 'dodatki', description: 'Utrzymuje konsystencje - wiekszosc naturalnego pochodzenia.' },
+        'przeciwutleniacz': { risk: 'low', category: 'dodatki', description: 'Zapobiega utlenianiu - czesto witamina C lub E, korzystne.' },
+        'konserwant': { risk: 'moderate', category: 'dodatki', description: 'Przedluza trwalosc - niektóre bezpieczne, inne kontrowersyjne.' },
+        'zagęszczacz': { risk: 'low', category: 'dodatki', description: 'Nadaje konsystencje - wiekszosc naturalna i bezpieczna.' },
+
+        // === WODA ===
+        'woda': { risk: 'low', category: 'podstawowe', description: 'Niezbedna do zycia - calkowicie bezpieczna.' }
+    },
+
     // Baza dodatkow E z ocena ryzyka
     additives: {
         // Barwniki
@@ -603,6 +703,158 @@ const Analyzer = {
         });
 
         return rows;
+    },
+
+    // Parsowanie i analiza skladnikow
+    parseIngredients(ingredientsText) {
+        if (!ingredientsText) return [];
+
+        // Czyszczenie tekstu
+        let text = ingredientsText
+            .toLowerCase()
+            .replace(/\([^)]*\)/g, '') // Usun nawiasy i ich zawartosc
+            .replace(/\[[^\]]*\]/g, '') // Usun nawiasy kwadratowe
+            .replace(/\d+(\.\d+)?%/g, '') // Usun procenty
+            .replace(/:/g, ',') // Zamien dwukropki na przecinki
+            .replace(/;/g, ',') // Zamien sredniki na przecinki
+            .replace(/\./g, ',') // Zamien kropki na przecinki
+            .replace(/\s+/g, ' '); // Usun podwojne spacje
+
+        // Podziel na skladniki
+        const rawIngredients = text.split(',')
+            .map(i => i.trim())
+            .filter(i => i.length > 1);
+
+        // Analizuj kazdy skladnik
+        const analyzedIngredients = [];
+        const seenIngredients = new Set();
+
+        rawIngredients.forEach((ingredient, index) => {
+            // Pomin duplikaty
+            if (seenIngredients.has(ingredient)) return;
+            seenIngredients.add(ingredient);
+
+            const analysis = this.analyzeIngredient(ingredient);
+            analyzedIngredients.push({
+                name: this.capitalizeFirst(ingredient),
+                originalName: ingredient,
+                position: index + 1,
+                ...analysis
+            });
+        });
+
+        return analyzedIngredients;
+    },
+
+    // Analiza pojedynczego skladnika
+    analyzeIngredient(ingredient) {
+        const ingredientLower = ingredient.toLowerCase().trim();
+
+        // Sprawdz dodatki E
+        const eMatch = ingredientLower.match(/e\s?(\d{3,4}[a-z]?)/i);
+        if (eMatch) {
+            const eCode = 'e' + eMatch[1].toLowerCase();
+            const additiveInfo = this.additives[eCode];
+            if (additiveInfo) {
+                return {
+                    risk: additiveInfo.risk,
+                    category: additiveInfo.category,
+                    description: additiveInfo.warning || this.getAdditiveDescription(additiveInfo),
+                    isAdditive: true,
+                    eCode: eCode.toUpperCase()
+                };
+            }
+        }
+
+        // Sprawdz baze skladnikow - dokladne dopasowanie
+        if (this.ingredientsDatabase[ingredientLower]) {
+            return {
+                ...this.ingredientsDatabase[ingredientLower],
+                isAdditive: false
+            };
+        }
+
+        // Sprawdz czesciowe dopasowanie
+        for (const [key, value] of Object.entries(this.ingredientsDatabase)) {
+            if (ingredientLower.includes(key) || key.includes(ingredientLower)) {
+                return {
+                    ...value,
+                    isAdditive: false,
+                    matchedKey: key
+                };
+            }
+        }
+
+        // Sprawdz kategorie ogolne
+        const categoryPatterns = [
+            { pattern: /cukier|cukr|slod|syrop|miód|frukt|gluk|sachar|dekstr|maltoz/i, category: 'cukry', risk: 'moderate', description: 'Skladnik cukrowy - moze przyczynic sie do podwyzszenia poziomu cukru we krwi.' },
+            { pattern: /tluszcz|olej|maslo|smalec|margar/i, category: 'tluszcze', risk: 'moderate', description: 'Skladnik tluszczowy - zawartosc i rodzaj tluszczu wplywa na zdrowie serca.' },
+            { pattern: /sol|sod|chlorek/i, category: 'sol', risk: 'moderate', description: 'Skladnik zawierajacy sód - nadmiar moze podnosic cisnienie krwi.' },
+            { pattern: /aromat|smak|zapach/i, category: 'dodatki', risk: 'moderate', description: 'Substancja smakowo-zapachowa - sklad czesto nieujawniony.' },
+            { pattern: /barwnik|kolor|pigment/i, category: 'dodatki', risk: 'moderate', description: 'Barwnik - moze byc naturalny lub syntetyczny.' },
+            { pattern: /konserwant|przedluz/i, category: 'dodatki', risk: 'moderate', description: 'Konserwant - przedluza trwalosc produktu.' },
+            { pattern: /emulgat|stabiliz|zageszcz/i, category: 'dodatki', risk: 'low', description: 'Dodatek technologiczny - zazwyczaj bezpieczny.' },
+            { pattern: /witamin|mineral/i, category: 'witaminy', risk: 'low', description: 'Witamina lub mineral - korzystne dla zdrowia.' },
+            { pattern: /maka|mąka|zboz|pszen|zytn|owsian|orkisz/i, category: 'zboza', risk: 'low', description: 'Skladnik zbozowy - zrodlo weglowodanów.' },
+            { pattern: /mleko|mlecz|serwatk|kazein|laktoz|smietana|masłanka/i, category: 'nabial', risk: 'low', description: 'Skladnik mleczny - zrodlo wapnia i bialka.' },
+            { pattern: /jaj|albumin/i, category: 'jaja', risk: 'low', description: 'Skladnik jajeczny - zrodlo bialka.' },
+            { pattern: /orzech|migdal|pistacj|nerkow/i, category: 'orzechy', risk: 'low', description: 'Orzech - zrodlo zdrowych tluszczów, ale potencjalny alergen.' },
+            { pattern: /soja|sojow/i, category: 'soja', risk: 'low', description: 'Skladnik sojowy - bialko roslinne, ale potencjalny alergen.' },
+            { pattern: /wod[ay]|h2o/i, category: 'podstawowe', risk: 'low', description: 'Woda - podstawowy, bezpieczny skladnik.' }
+        ];
+
+        for (const { pattern, category, risk, description } of categoryPatterns) {
+            if (pattern.test(ingredientLower)) {
+                return { risk, category, description, isAdditive: false };
+            }
+        }
+
+        // Nieznany skladnik
+        return {
+            risk: 'unknown',
+            category: 'inne',
+            description: 'Skladnik nierozpoznany - brak informacji o wplywie na zdrowie.',
+            isAdditive: false
+        };
+    },
+
+    // Opis dodatku E na podstawie kategorii
+    getAdditiveDescription(additiveInfo) {
+        const categoryDescriptions = {
+            'barwnik': 'Barwnik - nadaje produktowi kolor. Naturalne barwniki sa bezpieczne, syntetyczne moga powodowac reakcje u wrazliwych osób.',
+            'konserwant': 'Konserwant - przedluza trwalosc produktu. Niektóre sa bezpieczne, inne moga byc problematyczne.',
+            'przeciwutleniacz': 'Przeciwutleniacz - chroni przed psuciem. Wiele z nich to naturalne witaminy (C, E).',
+            'emulgator': 'Emulgator - laczy wode z tluszczem. Wiekszosc jest bezpieczna.',
+            'wzmacniacz smaku': 'Wzmacniacz smaku - intensyfikuje smak. Moze powodowac reakcje u wrazliwych osób.',
+            'slodzik': 'Slodzik - zamiennik cukru. Niektóre moga miec skutki uboczne przy duzym spozyciu.',
+            'stabilizator': 'Stabilizator - utrzymuje konsystencje. Zazwyczaj bezpieczny.'
+        };
+        return categoryDescriptions[additiveInfo.category] || `Dodatek ${additiveInfo.category} - ${additiveInfo.name}`;
+    },
+
+    // Pierwsza litera wielka
+    capitalizeFirst(str) {
+        return str.charAt(0).toUpperCase() + str.slice(1);
+    },
+
+    // Podsumowanie analizy skladnikow
+    getIngredientsSummary(analyzedIngredients) {
+        const summary = {
+            total: analyzedIngredients.length,
+            highRisk: analyzedIngredients.filter(i => i.risk === 'high').length,
+            moderateRisk: analyzedIngredients.filter(i => i.risk === 'moderate').length,
+            lowRisk: analyzedIngredients.filter(i => i.risk === 'low').length,
+            unknown: analyzedIngredients.filter(i => i.risk === 'unknown').length,
+            additives: analyzedIngredients.filter(i => i.isAdditive).length,
+            categories: {}
+        };
+
+        // Zlicz kategorie
+        analyzedIngredients.forEach(i => {
+            summary.categories[i.category] = (summary.categories[i.category] || 0) + 1;
+        });
+
+        return summary;
     }
 };
 

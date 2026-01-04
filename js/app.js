@@ -91,7 +91,11 @@ const App = {
             saveIngredientsBtn: document.getElementById('save-ingredients-btn'),
             additivesContainer: document.getElementById('additives-container'),
             additivesList: document.getElementById('additives-list'),
-            analysisSummary: document.getElementById('analysis-summary')
+            analysisSummary: document.getElementById('analysis-summary'),
+            // Analiza skladnikow
+            ingredientsAnalysisContainer: document.getElementById('ingredients-analysis-container'),
+            ingredientsSummary: document.getElementById('ingredients-summary'),
+            ingredientsList: document.getElementById('ingredients-list')
         };
     },
 
@@ -419,6 +423,7 @@ const App = {
         if (!ingredientsText) {
             this.elements.ingredientsText.innerHTML = '<span class="no-data">Brak danych o skladzie w bazie. Sprawdz etykiete produktu.</span>';
             this.elements.ingredientsContainer.classList.remove('hidden');
+            this.elements.ingredientsAnalysisContainer.classList.add('hidden');
             return;
         }
 
@@ -438,6 +443,98 @@ const App = {
 
         this.elements.ingredientsText.innerHTML = formattedText;
         this.elements.ingredientsContainer.classList.remove('hidden');
+
+        // Wyswietl szczegolowa analize skladnikow
+        this.displayIngredientsAnalysis(ingredientsText);
+    },
+
+    // Wyswietlanie szczegolowej analizy skladnikow
+    displayIngredientsAnalysis(ingredientsText) {
+        const analyzedIngredients = Analyzer.parseIngredients(ingredientsText);
+
+        if (analyzedIngredients.length === 0) {
+            this.elements.ingredientsAnalysisContainer.classList.add('hidden');
+            return;
+        }
+
+        // Podsumowanie
+        const summary = Analyzer.getIngredientsSummary(analyzedIngredients);
+        this.elements.ingredientsSummary.innerHTML = `
+            <div class="summary-stats">
+                <span class="stat stat-total">${summary.total} skladnikow</span>
+                ${summary.highRisk > 0 ? `<span class="stat stat-high">${summary.highRisk} wysokie ryzyko</span>` : ''}
+                ${summary.moderateRisk > 0 ? `<span class="stat stat-moderate">${summary.moderateRisk} umiarkowane</span>` : ''}
+                ${summary.lowRisk > 0 ? `<span class="stat stat-low">${summary.lowRisk} niskie ryzyko</span>` : ''}
+            </div>
+        `;
+
+        // Lista skladnikow
+        this.elements.ingredientsList.innerHTML = analyzedIngredients.map((ingredient, index) => {
+            const riskClass = `risk-${ingredient.risk}`;
+            const riskLabel = {
+                'high': 'Wysokie ryzyko',
+                'moderate': 'Umiarkowane',
+                'low': 'Niskie ryzyko',
+                'unknown': 'Nieznane'
+            }[ingredient.risk];
+
+            const riskIcon = {
+                'high': '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>',
+                'moderate': '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>',
+                'low': '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>',
+                'unknown': '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>'
+            }[ingredient.risk];
+
+            const categoryLabel = {
+                'cukry': 'Cukier',
+                'tluszcze': 'Tluszcz',
+                'sol': 'Sól',
+                'maki': 'Maka/Skrobia',
+                'nabial': 'Nabiał',
+                'bialka': 'Bialko',
+                'warzywa': 'Warzywo',
+                'przyprawy': 'Przyprawa',
+                'dodatki': 'Dodatek',
+                'podstawowe': 'Podstawowy',
+                'witaminy': 'Witamina',
+                'zboza': 'Zboze',
+                'jaja': 'Jaja',
+                'orzechy': 'Orzechy',
+                'soja': 'Soja',
+                'barwnik': 'Barwnik',
+                'konserwant': 'Konserwant',
+                'emulgator': 'Emulgator',
+                'wzmacniacz smaku': 'Wzmacniacz smaku',
+                'slodzik': 'Slodzik',
+                'przeciwutleniacz': 'Przeciwutleniacz',
+                'inne': 'Inny'
+            }[ingredient.category] || ingredient.category;
+
+            return `
+                <div class="ingredient-item ${riskClass}" data-index="${index}">
+                    <div class="ingredient-header">
+                        <div class="ingredient-position">${ingredient.position}</div>
+                        <div class="ingredient-name">${ingredient.name}${ingredient.eCode ? ` <span class="e-code">${ingredient.eCode}</span>` : ''}</div>
+                        <div class="ingredient-risk" title="${riskLabel}">
+                            ${riskIcon}
+                        </div>
+                    </div>
+                    <div class="ingredient-details">
+                        <span class="ingredient-category">${categoryLabel}</span>
+                        <p class="ingredient-description">${ingredient.description}</p>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        this.elements.ingredientsAnalysisContainer.classList.remove('hidden');
+
+        // Dodaj event listeners dla rozwijania
+        this.elements.ingredientsList.querySelectorAll('.ingredient-item').forEach(item => {
+            item.addEventListener('click', () => {
+                item.classList.toggle('expanded');
+            });
+        });
     },
 
     // Wyswietlanie dodatkow

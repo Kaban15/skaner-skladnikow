@@ -1041,6 +1041,231 @@ body {
 .history-nutriscore.grade-d { background-color: #ee8100; }
 .history-nutriscore.grade-e { background-color: #e63e11; }
 
+/* Ingredients Analysis Section */
+.ingredients-analysis-container {
+    background: var(--surface);
+    border-radius: var(--radius-md);
+    padding: 16px;
+    box-shadow: var(--shadow-sm);
+}
+
+.ingredients-analysis-header {
+    margin-bottom: 16px;
+}
+
+.ingredients-analysis-header h3 {
+    font-size: 1rem;
+    margin-bottom: 12px;
+}
+
+.ingredients-summary {
+    margin-bottom: 8px;
+}
+
+.summary-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.summary-stats .stat {
+    font-size: 0.75rem;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-weight: 500;
+}
+
+.stat-total {
+    background: var(--background);
+    color: var(--text-secondary);
+}
+
+.stat-high {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+.stat-moderate {
+    background: #fef3c7;
+    color: #b45309;
+}
+
+.stat-low {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.ingredients-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.ingredient-item {
+    background: var(--background);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    border-left: 4px solid;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.ingredient-item:hover {
+    box-shadow: var(--shadow-sm);
+}
+
+.ingredient-item.risk-high { border-color: #ef4444; }
+.ingredient-item.risk-moderate { border-color: #f59e0b; }
+.ingredient-item.risk-low { border-color: #22c55e; }
+.ingredient-item.risk-unknown { border-color: #94a3b8; }
+
+.ingredient-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+}
+
+.ingredient-position {
+    width: 24px;
+    height: 24px;
+    background: var(--border-color);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+}
+
+.ingredient-name {
+    flex: 1;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.ingredient-name .e-code {
+    font-size: 0.75rem;
+    background: #fce7f3;
+    color: #9d174d;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: 4px;
+}
+
+.ingredient-risk {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.risk-high .ingredient-risk {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+.risk-moderate .ingredient-risk {
+    background: #fef3c7;
+    color: #b45309;
+}
+
+.risk-low .ingredient-risk {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.risk-unknown .ingredient-risk {
+    background: #f1f5f9;
+    color: #64748b;
+}
+
+.ingredient-details {
+    display: none;
+    padding: 0 12px 12px 46px;
+}
+
+.ingredient-item.expanded .ingredient-details {
+    display: block;
+}
+
+.ingredient-category {
+    display: inline-block;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-secondary);
+    background: var(--border-color);
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-bottom: 6px;
+}
+
+.ingredient-description {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin: 0;
+}
+
+/* Expand indicator */
+.ingredient-item::after {
+    content: '';
+    display: block;
+    height: 2px;
+    background: linear-gradient(to right, transparent, var(--border-color), transparent);
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.ingredient-item:hover::after {
+    opacity: 1;
+}
+
+/* Dark mode for ingredients analysis */
+@media (prefers-color-scheme: dark) {
+    .stat-high {
+        background: #450a0a;
+        color: #fca5a5;
+    }
+
+    .stat-moderate {
+        background: #451a03;
+        color: #fcd34d;
+    }
+
+    .stat-low {
+        background: #052e16;
+        color: #86efac;
+    }
+
+    .risk-high .ingredient-risk {
+        background: #450a0a;
+        color: #fca5a5;
+    }
+
+    .risk-moderate .ingredient-risk {
+        background: #451a03;
+        color: #fcd34d;
+    }
+
+    .risk-low .ingredient-risk {
+        background: #052e16;
+        color: #86efac;
+    }
+
+    .ingredient-name .e-code {
+        background: #500724;
+        color: #f9a8d4;
+    }
+}
+
 /* Camera preview */
 #camera-preview {
     width: 100%;
