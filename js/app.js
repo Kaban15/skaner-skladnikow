@@ -43,6 +43,9 @@ const App = {
             scanBtn: document.getElementById('scan-btn'),
             scannerSection: document.getElementById('scanner-section'),
             closeScanner: document.getElementById('close-scanner'),
+            torchBtn: document.getElementById('torch-btn'),
+            focusBtn: document.getElementById('focus-btn'),
+            scannerVideoContainer: document.getElementById('scanner-video-container'),
             loadingSection: document.getElementById('loading-section'),
             errorSection: document.getElementById('error-section'),
             errorMessage: document.getElementById('error-message'),
@@ -103,6 +106,14 @@ const App = {
         // Skanowanie
         this.elements.scanBtn.addEventListener('click', () => this.startScanner());
         this.elements.closeScanner.addEventListener('click', () => this.stopScanner());
+
+        // Kontrolki skanera
+        this.elements.torchBtn.addEventListener('click', async () => {
+            const isOn = await Scanner.toggleTorch();
+            this.elements.torchBtn.classList.toggle('active', isOn);
+        });
+        this.elements.focusBtn.addEventListener('click', () => Scanner.triggerFocus());
+        this.elements.scannerVideoContainer.addEventListener('click', () => Scanner.triggerFocus());
 
         // Retry i nowe wyszukiwanie
         this.elements.retryBtn.addEventListener('click', () => this.resetToInput());

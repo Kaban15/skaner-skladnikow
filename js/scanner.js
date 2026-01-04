@@ -7,6 +7,7 @@ const Scanner = {
     html5QrCode: null,
     isScanning: false,
     onScanCallback: null,
+    torchEnabled: false,
 
     // Inicjalizacja skanera
     init(containerId) {
@@ -68,6 +69,9 @@ const Scanner = {
 
             this.isScanning = true;
 
+            // Proba wymuszenia autofokusu
+            this.tryEnableAutoFocus();
+
         } catch (err) {
             console.error('Blad uruchamiania skanera:', err);
 
@@ -120,6 +124,102 @@ const Scanner = {
     // Sprawdzenie czy skaner jest aktywny
     isActive() {
         return this.isScanning;
+    },
+
+    // Proba wlaczenia autofokusu na aktywnym strumieniu
+    async tryEnableAutoFocus() {
+        try {
+            const video = document.querySelector('#scanner-video-container video');
+            if (!video || !video.srcObject) return;
+
+            const tracks = video.srcObject.getVideoTracks();
+            if (tracks.length === 0) return;
+
+            const track = tracks[0];
+            const capabilities = track.getCapabilities ? track.getCapabilities() : {};
+
+            // Sprawdz czy fokus jest wspierany
+            if (capabilities.focusMode && capabilities.focusMode.includes('continuous')) {
+                await track.applyConstraints({
+                    advanced: [{ focusMode: 'continuous' }]
+                });
+                console.log('Autofokus wlaczony');
+            } else if (capabilities.focusMode && capabilities.focusMode.includes('auto')) {
+                await track.applyConstraints({
+                    advanced: [{ focusMode: 'auto' }]
+                });
+                console.log('Fokus auto wlaczony');
+            }
+
+        } catch (err) {
+            console.warn('Nie udalo sie ustawic autofokusu:', err);
+        }
+    },
+
+    // Przelaczanie latarki
+    async toggleTorch() {
+        try {
+            const video = document.querySelector('#scanner-video-container video');
+            if (!video || !video.srcObject) return false;
+
+            const tracks = video.srcObject.getVideoTracks();
+            if (tracks.length === 0) return false;
+
+            const track = tracks[0];
+            const capabilities = track.getCapabilities ? track.getCapabilities() : {};
+
+            if (!capabilities.torch) {
+                console.warn('Latarka nie jest dostepna');
+                return false;
+            }
+
+            this.torchEnabled = !this.torchEnabled;
+            await track.applyConstraints({
+                advanced: [{ torch: this.torchEnabled }]
+            });
+
+            return this.torchEnabled;
+        } catch (err) {
+            console.error('Blad latarki:', err);
+            return false;
+        }
+    },
+
+    // Reczne wymuszenie fokusa (tap-to-focus)
+    async triggerFocus() {
+        try {
+            const video = document.querySelector('#scanner-video-container video');
+            if (!video || !video.srcObject) return;
+
+            const tracks = video.srcObject.getVideoTracks();
+            if (tracks.length === 0) return;
+
+            const track = tracks[0];
+            const capabilities = track.getCapabilities ? track.getCapabilities() : {};
+
+            // Przelacz miedzy manual a continuous zeby wymusic refokus
+            if (capabilities.focusMode) {
+                if (capabilities.focusMode.includes('manual')) {
+                    await track.applyConstraints({
+                        advanced: [{ focusMode: 'manual' }]
+                    });
+                    // Krotka pauza
+                    await new Promise(r => setTimeout(r, 100));
+                }
+                if (capabilities.focusMode.includes('continuous')) {
+                    await track.applyConstraints({
+                        advanced: [{ focusMode: 'continuous' }]
+                    });
+                } else if (capabilities.focusMode.includes('auto')) {
+                    await track.applyConstraints({
+                        advanced: [{ focusMode: 'auto' }]
+                    });
+                }
+                console.log('Fokus odswiezony');
+            }
+        } catch (err) {
+            console.warn('Nie udalo sie odswiezyc fokusa:', err);
+        }
     },
 
     // Sprawdzenie dostepnosci kamery
