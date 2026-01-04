@@ -93,31 +93,57 @@ const App = {
     // Bindowanie eventow
     bindEvents() {
         // Szukanie
-        this.elements.searchBtn.addEventListener('click', () => this.handleSearch());
-        this.elements.barcodeInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') this.handleSearch();
-        });
+        if (this.elements.searchBtn) {
+            this.elements.searchBtn.addEventListener('click', () => this.handleSearch());
+        }
+        if (this.elements.barcodeInput) {
+            this.elements.barcodeInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') this.handleSearch();
+            });
+        }
 
         // Retry i nowe wyszukiwanie
-        this.elements.retryBtn.addEventListener('click', () => this.resetToInput());
-        this.elements.newSearchBtn.addEventListener('click', () => this.resetToInput());
+        if (this.elements.retryBtn) {
+            this.elements.retryBtn.addEventListener('click', () => this.resetToInput());
+        }
+        if (this.elements.newSearchBtn) {
+            this.elements.newSearchBtn.addEventListener('click', () => this.resetToInput());
+        }
 
         // Dodawanie skladu
-        this.elements.addIngredientsBtn.addEventListener('click', () => this.openIngredientsModal('manual'));
-        this.elements.photoIngredientsBtn.addEventListener('click', () => this.openIngredientsModal('camera'));
-        this.elements.uploadIngredientsBtn.addEventListener('click', () => this.elements.imageUpload.click());
-        this.elements.imageUpload.addEventListener('change', (e) => this.handleImageUpload(e));
-        this.elements.closeModal.addEventListener('click', () => this.closeIngredientsModal());
-        this.elements.cancelCameraBtn.addEventListener('click', () => this.cancelCamera());
-        this.elements.captureBtn.addEventListener('click', () => this.capturePhoto());
-        this.elements.saveIngredientsBtn.addEventListener('click', () => this.saveIngredients());
+        if (this.elements.addIngredientsBtn) {
+            this.elements.addIngredientsBtn.addEventListener('click', () => this.openIngredientsModal('manual'));
+        }
+        if (this.elements.photoIngredientsBtn) {
+            this.elements.photoIngredientsBtn.addEventListener('click', () => this.openIngredientsModal('camera'));
+        }
+        if (this.elements.uploadIngredientsBtn) {
+            this.elements.uploadIngredientsBtn.addEventListener('click', () => this.elements.imageUpload.click());
+        }
+        if (this.elements.imageUpload) {
+            this.elements.imageUpload.addEventListener('change', (e) => this.handleImageUpload(e));
+        }
+        if (this.elements.closeModal) {
+            this.elements.closeModal.addEventListener('click', () => this.closeIngredientsModal());
+        }
+        if (this.elements.cancelCameraBtn) {
+            this.elements.cancelCameraBtn.addEventListener('click', () => this.cancelCamera());
+        }
+        if (this.elements.captureBtn) {
+            this.elements.captureBtn.addEventListener('click', () => this.capturePhoto());
+        }
+        if (this.elements.saveIngredientsBtn) {
+            this.elements.saveIngredientsBtn.addEventListener('click', () => this.saveIngredients());
+        }
 
         // Zamkniecie modalu po kliknieciu w tlo
-        this.elements.ingredientsModal.addEventListener('click', (e) => {
-            if (e.target === this.elements.ingredientsModal) {
-                this.closeIngredientsModal();
-            }
-        });
+        if (this.elements.ingredientsModal) {
+            this.elements.ingredientsModal.addEventListener('click', (e) => {
+                if (e.target === this.elements.ingredientsModal) {
+                    this.closeIngredientsModal();
+                }
+            });
+        }
     },
 
     // Obsluga wyszukiwania
